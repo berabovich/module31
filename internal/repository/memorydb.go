@@ -58,3 +58,9 @@ func (r *memorydb) MakeFriends(target int, source int) (string, string, error) {
 	r.usersById[source].Friends = append(r.usersById[source].Friends, r.usersById[target].Name)
 	return r.usersById[target].Name, r.usersById[source].Name, nil
 }
+func (r *memorydb) GetFriends(userId int) ([]string, error) {
+	r.Lock()
+	defer r.Unlock()
+	friends := r.usersById[userId].Friends
+	return friends, nil
+}
