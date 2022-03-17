@@ -65,7 +65,7 @@ func (c *Controller) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		buildResponse(w, http.StatusInternalServerError, nil)
 		return
 	}
-	buildResponse(w, http.StatusCreated, response)
+	buildResponse(w, http.StatusOK, response)
 }
 func (c *Controller) GetUsers(w http.ResponseWriter, _ *http.Request) {
 	result := c.useCase.GetUsers()
@@ -95,7 +95,7 @@ func (c *Controller) UpgradeUser(w http.ResponseWriter, r *http.Request) {
 		buildResponse(w, http.StatusInternalServerError, nil)
 		return
 	}
-	buildResponse(w, http.StatusCreated, response)
+	buildResponse(w, http.StatusOK, response)
 
 }
 func (c *Controller) MakeFriends(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +119,7 @@ func (c *Controller) MakeFriends(w http.ResponseWriter, r *http.Request) {
 		buildResponse(w, http.StatusInternalServerError, nil)
 		return
 	}
-	buildResponse(w, http.StatusCreated, response)
+	buildResponse(w, http.StatusOK, response)
 }
 func (c *Controller) GetFriends(w http.ResponseWriter, r *http.Request) {
 	params := chi.URLParam(r, "id")
@@ -132,7 +132,7 @@ func (c *Controller) GetFriends(w http.ResponseWriter, r *http.Request) {
 	}
 	response, err := json.Marshal(friends)
 
-	buildResponse(w, http.StatusCreated, response)
+	buildResponse(w, http.StatusOK, response)
 
 }
 

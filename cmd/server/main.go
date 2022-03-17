@@ -7,18 +7,11 @@ import (
 )
 
 func main() {
-	err := app.Run(os.Args)
-	//err = app.Run2(os.Args)
+	port := os.Args
+	//port := []string{"", ":8080"}
+	err := app.Run(port[1])
 	if err != nil {
 		log.Fatal(err)
 	}
-	//	err = app.Run2(os.Args)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-}
 
-//func main() {
-//	http.HandleFunc("/", proxy.HandleProxy)
-//	log.Fatalln(http.ListenAndServe("localhost:9000", nil))
-//}
+}
