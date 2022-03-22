@@ -9,8 +9,8 @@ import (
 )
 
 func Run(port string) error {
-	repositoryA, err := repository.NewMemorydb()
-	//repositoryA, err := repositoryA.NewMongodb()
+	//repositoryA, err := repository.NewMemorydb()
+	repositoryA, err := repository.NewMongodb()
 	if err != nil {
 		return err
 	}
