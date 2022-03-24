@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -41,8 +40,6 @@ func disconnectDB(client *mongo.Client) {
 	err := client.Disconnect(ctx)
 	if err != nil {
 		log.Fatal(err)
-	} else {
-		fmt.Println("Connection to MongoDB closed")
 	}
 }
 
