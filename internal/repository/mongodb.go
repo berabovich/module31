@@ -46,6 +46,7 @@ func disconnectDB(client *mongo.Client) {
 func (r *mongodb) CreateUser(user *entity.User) (int, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
+
 	var u *entity.User
 	opt := options.FindOne().SetSort(bson.D{{"_id", -1}})
 	err := collection.FindOne(
@@ -53,6 +54,15 @@ func (r *mongodb) CreateUser(user *entity.User) (int, error) {
 		bson.D{{}},
 		opt,
 	).Decode(&u)
+	if err != nil {
+		user.Id = 1
+		_, err = collection.InsertOne(ctx, user)
+		if err != nil {
+			log.Fatal(err)
+		}
+		disconnectDB(client)
+		return user.Id, nil
+	}
 	r.index = u.Id
 	r.index++
 	user.Id = r.index
