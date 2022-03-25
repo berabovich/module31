@@ -2,4 +2,4 @@ POST /make_friends HTTP/1.1
 Content-Type: application/json; charset=utf-8
 Host: localhost:9000
 
-{"source_id":6 ,"target_id":9}
+{"source_id":4 ,"target_id":7}

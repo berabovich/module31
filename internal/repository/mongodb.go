@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"module31/internal/entity"
+	"strconv"
 )
 
 var collection *mongo.Collection
@@ -82,11 +83,11 @@ func (r *mongodb) DeleteUser(id int) (string, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	filter := bson.D{{"Friends", user.Name}}
+	filter := bson.D{{"Friends", strconv.Itoa(id)}}
 
 	update := bson.D{
 		{"$pull", bson.D{
-			{"Friends", user.Name},
+			{"Friends", strconv.Itoa(id)},
 		}},
 	}
 	_, err = collection.UpdateMany(ctx, filter, update)
@@ -139,49 +140,59 @@ func (r *mongodb) UpdateAge(id int, newAge int) error {
 func (r *mongodb) MakeFriends(target int, source int) (string, string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
-	cur := collection.FindOne(ctx, bson.D{{"_id", target}})
-
+	cur, _ := collection.Find(ctx, bson.D{{
+		"_id",
+		bson.D{{
+			"$in",
+			bson.A{target, source},
+		}},
+	}})
 	var user *entity.User
-	err := cur.Decode(&user)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cur2 := collection.FindOne(ctx, bson.D{{"_id", source}})
+	var u1 string
+	var u2 string
+	for cur.Next(ctx) {
+		_ = cur.Decode(&user)
+		if user.Id == target {
+			u1 = user.Name
+			filter := bson.D{{"_id", target}}
 
-	var user2 *entity.User
-	err = cur2.Decode(&user2)
-	if err != nil {
-		log.Fatal(err)
-	}
-	filter := bson.D{{"_id", target}}
+			update := bson.D{
+				{"$push", bson.D{
+					{"Friends", strconv.Itoa(source)},
+				}},
+			}
+			_, _ = collection.UpdateOne(ctx, filter, update)
+		} else if user.Id == source {
+			u2 = user.Name
+			filter := bson.D{{"_id", source}}
 
-	update := bson.D{
-		{"$push", bson.D{
-			{"Friends", user2.Name},
-		}},
+			update := bson.D{
+				{"$push", bson.D{
+					{"Friends", strconv.Itoa(target)},
+				}},
+			}
+			_, _ = collection.UpdateOne(ctx, filter, update)
+		}
 	}
-	_, err = collection.UpdateOne(ctx, filter, update)
-	filter = bson.D{{"_id", source}}
-
-	update = bson.D{
-		{"$push", bson.D{
-			{"Friends", user.Name},
-		}},
-	}
-	_, err = collection.UpdateOne(ctx, filter, update)
 
 	disconnectDB(client)
-	return user.Name, user2.Name, nil
+	return u1, u2, nil
 }
 func (r *mongodb) GetFriends(userId int) ([]string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
-	cur := collection.FindOne(ctx, bson.D{{"_id", userId}})
+
 	var user *entity.User
-	err := cur.Decode(&user)
+
+	f, err := collection.Find(ctx, bson.D{{"Friends", strconv.Itoa(userId)}})
 	if err != nil {
 		log.Fatal(err)
 	}
+	var friends []string
+	for f.Next(ctx) {
+		_ = f.Decode(&user)
+		friends = append(friends, user.Name)
+	}
 	disconnectDB(client)
-	return user.Friends, nil
+	return friends, nil
 }
