@@ -44,6 +44,7 @@ func disconnectDB(client *mongo.Client) {
 	}
 }
 
+//CreateUser accepts new user, adds to the database and return user id
 func (r *mongodb) CreateUser(user *entity.User) (int, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
@@ -74,6 +75,8 @@ func (r *mongodb) CreateUser(user *entity.User) (int, error) {
 	disconnectDB(client)
 	return user.Id, nil
 }
+
+//DeleteUser accepts user id, delete from database and return user name
 func (r *mongodb) DeleteUser(id int) (string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
@@ -99,6 +102,8 @@ func (r *mongodb) DeleteUser(id int) (string, error) {
 	disconnectDB(client)
 	return user.Name, nil
 }
+
+//GetUsers return all users from database
 func (r *mongodb) GetUsers() map[int]*entity.User {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
@@ -119,6 +124,8 @@ func (r *mongodb) GetUsers() map[int]*entity.User {
 	disconnectDB(client)
 	return r.usersById
 }
+
+//UpdateAge accepts user id and new age, update user age into database
 func (r *mongodb) UpdateAge(id int, newAge int) error {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
@@ -137,6 +144,7 @@ func (r *mongodb) UpdateAge(id int, newAge int) error {
 	return nil
 }
 
+//MakeFriends accepts target and source id, adds to the slice of friends each other and returns users names
 func (r *mongodb) MakeFriends(target int, source int) (string, string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
@@ -178,6 +186,8 @@ func (r *mongodb) MakeFriends(target int, source int) (string, string, error) {
 	disconnectDB(client)
 	return u1, u2, nil
 }
+
+//GetFriends adds user id, return slice of friends names
 func (r *mongodb) GetFriends(userId int) ([]string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
