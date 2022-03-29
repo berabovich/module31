@@ -2,19 +2,20 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"module31/internal/entity"
-	"strconv"
 )
 
 var collection *mongo.Collection
 var ctx = context.TODO()
 
 type mongodb struct {
-	index     int
+	//index     int
 	usersById map[int]*entity.User
 }
 
@@ -45,72 +46,61 @@ func disconnectDB(client *mongo.Client) {
 }
 
 //CreateUser accepts new user, adds to the database and return user id
-func (r *mongodb) CreateUser(user *entity.User) (int, error) {
+func (r *mongodb) CreateUser(user *entity.User) (string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
 
-	var u *entity.User
-	opt := options.FindOne().SetSort(bson.D{{"_id", -1}})
-	err := collection.FindOne(
-		ctx,
-		bson.D{{}},
-		opt,
-	).Decode(&u)
-	if err != nil {
-		user.Id = 1
-		_, err = collection.InsertOne(ctx, user)
-		if err != nil {
-			log.Fatal(err)
-		}
-		disconnectDB(client)
-		return user.Id, nil
-	}
-	r.index = u.Id
-	r.index++
-	user.Id = r.index
-	_, err = collection.InsertOne(ctx, user)
+	u, err := collection.InsertOne(ctx, user)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	id := u.InsertedID.(primitive.ObjectID).Hex()
+
 	disconnectDB(client)
-	return user.Id, nil
+	return id, nil
 }
 
 //DeleteUser accepts user id, delete from database and return user name
-func (r *mongodb) DeleteUser(id int) (string, error) {
+func (r *mongodb) DeleteUser(id string) (string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
-	var user *entity.User
-	cur := collection.FindOne(ctx, bson.D{{"_id", id}})
-	err := cur.Decode(&user)
+
+	userID, err := primitive.ObjectIDFromHex(id)
+
+	var d bson.M
+	_ = collection.FindOneAndDelete(ctx, bson.D{{
+		"_id",
+		userID,
+	}}).Decode(&d)
+
+	name := d["Name"].(string)
 	if err != nil {
 		log.Fatal(err)
 	}
-	filter := bson.D{{"Friends", strconv.Itoa(id)}}
-
+	filter := bson.D{{"Friends", id}}
+	fmt.Println(name)
 	update := bson.D{
 		{"$pull", bson.D{
-			{"Friends", strconv.Itoa(id)},
+			{"Friends", id},
 		}},
 	}
 	_, err = collection.UpdateMany(ctx, filter, update)
 
-	_, err = collection.DeleteOne(ctx, bson.D{{"_id", id}})
-	if err != nil {
-		log.Fatal(err)
-	}
 	disconnectDB(client)
-	return user.Name, nil
+	return name, nil
 }
 
 //GetUsers return all users from database
-func (r *mongodb) GetUsers() map[int]*entity.User {
+func (r *mongodb) GetUsers() []*entity.User {
 	client := connectDB()
+
 	collection = client.Database("usersDB").Collection("users")
 	cur, err := collection.Find(ctx, bson.D{})
 	if err != nil {
 		log.Fatal(err)
 	}
+	var allUsers []*entity.User
 	for cur.Next(ctx) {
 
 		var user *entity.User
@@ -118,25 +108,26 @@ func (r *mongodb) GetUsers() map[int]*entity.User {
 		if err != nil {
 			log.Fatal(err)
 		}
-		r.usersById[user.Id] = user
+		allUsers = append(allUsers, user)
 	}
 	err = cur.Close(ctx)
 	disconnectDB(client)
-	return r.usersById
+	return allUsers
 }
 
 //UpdateAge accepts user id and new age, update user age into database
-func (r *mongodb) UpdateAge(id int, newAge int) error {
+func (r *mongodb) UpdateAge(id string, newAge int) error {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
-	filter := bson.D{{"_id", id}}
+	userID, err := primitive.ObjectIDFromHex(id)
+	filter := bson.D{{"_id", userID}}
 
 	update := bson.D{
 		{"$set", bson.D{
 			{"Age", newAge},
 		}},
 	}
-	_, err := collection.UpdateOne(ctx, filter, update)
+	_, err = collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -145,63 +136,67 @@ func (r *mongodb) UpdateAge(id int, newAge int) error {
 }
 
 //MakeFriends accepts target and source id, adds to the slice of friends each other and returns users names
-func (r *mongodb) MakeFriends(target int, source int) (string, string, error) {
+func (r *mongodb) MakeFriends(target string, source string) (string, string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
+	targetID, _ := primitive.ObjectIDFromHex(target)
+	sourceID, _ := primitive.ObjectIDFromHex(source)
+	opt := bson.D{
+		{"_id", 0},
+		{"Name", 1},
+	}
 	cur, _ := collection.Find(ctx, bson.D{{
 		"_id",
 		bson.D{{
 			"$in",
-			bson.A{target, source},
+			bson.A{targetID, sourceID},
 		}},
-	}})
-	var user *entity.User
-	var u1 string
-	var u2 string
+	}}, options.Find().SetProjection(opt))
+	var n bson.M
+	var names []string
+
 	for cur.Next(ctx) {
-		_ = cur.Decode(&user)
-		if user.Id == target {
-			u1 = user.Name
-			filter := bson.D{{"_id", target}}
-
-			update := bson.D{
-				{"$push", bson.D{
-					{"Friends", strconv.Itoa(source)},
-				}},
-			}
-			_, _ = collection.UpdateOne(ctx, filter, update)
-		} else if user.Id == source {
-			u2 = user.Name
-			filter := bson.D{{"_id", source}}
-
-			update := bson.D{
-				{"$push", bson.D{
-					{"Friends", strconv.Itoa(target)},
-				}},
-			}
-			_, _ = collection.UpdateOne(ctx, filter, update)
-		}
+		_ = cur.Decode(&n)
+		names = append(names, n["Name"].(string))
 	}
 
+	filter := bson.D{{"_id", targetID}}
+
+	update := bson.D{
+		{"$push", bson.D{
+			{"Friends", source},
+		}},
+	}
+	_, _ = collection.UpdateOne(ctx, filter, update)
+
+	filter = bson.D{{"_id", sourceID}}
+
+	update = bson.D{
+		{"$push", bson.D{
+			{"Friends", target},
+		}},
+	}
+	_, _ = collection.UpdateOne(ctx, filter, update)
+
 	disconnectDB(client)
-	return u1, u2, nil
+	return names[0], names[1], nil
 }
 
-//GetFriends adds user id, return slice of friends names
-func (r *mongodb) GetFriends(userId int) ([]string, error) {
+//GetFriends accepts user id, return slice of friends names
+func (r *mongodb) GetFriends(userId string) ([]string, error) {
 	client := connectDB()
 	collection = client.Database("usersDB").Collection("users")
 
-	var user *entity.User
+	var user bson.M
 
-	f, err := collection.Find(ctx, bson.D{{"Friends", strconv.Itoa(userId)}})
+	f, err := collection.Find(ctx, bson.D{{"Friends", userId}})
 	if err != nil {
 		log.Fatal(err)
 	}
 	var friends []string
 	for f.Next(ctx) {
 		_ = f.Decode(&user)
-		friends = append(friends, user.Name)
+		friends = append(friends, user["Name"].(string))
 	}
 	disconnectDB(client)
 	return friends, nil

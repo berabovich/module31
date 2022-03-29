@@ -8,7 +8,6 @@ import (
 	"module31/internal/entity"
 	"module31/internal/usecase"
 	"net/http"
-	"strconv"
 )
 
 type Controller struct {
@@ -21,6 +20,7 @@ func NewController(useCase usecase.Usecase) *Controller {
 	}
 }
 
+//CreateUser accepts new user, sends user to the use case and write user id
 func (c *Controller) CreateUser(w http.ResponseWriter, r *http.Request) {
 	user := &entity.User{}
 	err := json.NewDecoder(r.Body).Decode(user)
@@ -35,7 +35,7 @@ func (c *Controller) CreateUser(w http.ResponseWriter, r *http.Request) {
 		buildResponse(w, http.StatusInternalServerError, nil)
 		return
 	}
-	result := map[string]int{"id": id}
+	result := map[string]string{"id": id}
 	response, err := json.Marshal(result)
 	if err != nil {
 		log.Println(err)
@@ -44,6 +44,8 @@ func (c *Controller) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	buildResponse(w, http.StatusCreated, response)
 }
+
+//DeleteUser accepts user id, sends to the use case and write name of deleted user
 func (c *Controller) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userId := &entity.Id{}
 	err := json.NewDecoder(r.Body).Decode(&userId)
@@ -67,6 +69,8 @@ func (c *Controller) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	buildResponse(w, http.StatusOK, response)
 }
+
+//GetUsers sends to the use case and write all users
 func (c *Controller) GetUsers(w http.ResponseWriter, _ *http.Request) {
 	result := c.useCase.GetUsers()
 	response, err := json.Marshal(result)
@@ -78,11 +82,13 @@ func (c *Controller) GetUsers(w http.ResponseWriter, _ *http.Request) {
 	buildResponse(w, http.StatusCreated, response)
 
 }
+
+//UpgradeUser accepts user id and new age, sends to the use case and write result
 func (c *Controller) UpgradeUser(w http.ResponseWriter, r *http.Request) {
 	params := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(params)
+	id := params
 	upgradeUser := &entity.UserUpgrade{}
-	err = json.NewDecoder(r.Body).Decode(&upgradeUser)
+	err := json.NewDecoder(r.Body).Decode(&upgradeUser)
 	if err != nil {
 		log.Println(err)
 		buildResponse(w, http.StatusInternalServerError, nil)
@@ -98,6 +104,8 @@ func (c *Controller) UpgradeUser(w http.ResponseWriter, r *http.Request) {
 	buildResponse(w, http.StatusOK, response)
 
 }
+
+//MakeFriends accepts target and source id, sends to the use case and write users names
 func (c *Controller) MakeFriends(w http.ResponseWriter, r *http.Request) {
 	user := &entity.Id{}
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -121,9 +129,11 @@ func (c *Controller) MakeFriends(w http.ResponseWriter, r *http.Request) {
 	}
 	buildResponse(w, http.StatusOK, response)
 }
+
+//GetFriends accepts user id, sends to the use case and write slice of friends names
 func (c *Controller) GetFriends(w http.ResponseWriter, r *http.Request) {
 	params := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(params)
+	id := params
 	friends, err := c.useCase.GetFriends(id)
 	if err != nil {
 		log.Println(err)

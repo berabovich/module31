@@ -4,21 +4,21 @@ import "module31/internal/entity"
 
 type (
 	Usecase interface {
-		CreateUser(*entity.User) (int, error)
-		DeleteUser(int) (string, error)
-		UpdateUser(int, int) error
-		GetFriends(int) ([]string, error)
-		MakeFriends(int, int) (string, string, error)
-		GetUsers() map[int]*entity.User
+		CreateUser(*entity.User) (string, error)
+		DeleteUser(string) (string, error)
+		UpdateUser(string, int) error
+		GetFriends(string) ([]string, error)
+		MakeFriends(string, string) (string, string, error)
+		GetUsers() []*entity.User
 	}
 
 	Repository interface {
-		CreateUser(*entity.User) (int, error)
-		DeleteUser(int) (string, error)
-		UpdateAge(int, int) error
-		GetFriends(int) ([]string, error)
-		MakeFriends(int, int) (string, string, error)
-		GetUsers() map[int]*entity.User
+		CreateUser(*entity.User) (string, error)
+		DeleteUser(string) (string, error)
+		UpdateAge(string, int) error
+		GetFriends(string) ([]string, error)
+		MakeFriends(string, string) (string, string, error)
+		GetUsers() []*entity.User
 	}
 )
 
@@ -32,32 +32,38 @@ func NewUsecase(repository Repository) *usecase {
 	}
 }
 
-func (u *usecase) CreateUser(user *entity.User) (int, error) {
+//CreateUser accepts user struck, sends to the repository and return user id
+func (u *usecase) CreateUser(user *entity.User) (string, error) {
 	uid, err := u.repository.CreateUser(user)
 	return uid, err
 }
 
-func (u *usecase) DeleteUser(id int) (string, error) {
+//DeleteUser accepts user id, sends to the repository and return username
+func (u *usecase) DeleteUser(id string) (string, error) {
 	name, err := u.repository.DeleteUser(id)
 	return name, err
 }
 
-func (u *usecase) GetUsers() map[int]*entity.User {
+//GetUsers sends to the repository and return slice of all users
+func (u *usecase) GetUsers() []*entity.User {
 	allUsers := u.repository.GetUsers()
 	return allUsers
 }
 
-func (u *usecase) UpdateUser(id int, newAge int) error {
+//UpdateUser accepts user id and new age,sends to the repository
+func (u *usecase) UpdateUser(id string, newAge int) error {
 	err := u.repository.UpdateAge(id, newAge)
 	return err
 }
 
-func (u *usecase) MakeFriends(target int, source int) (string, string, error) {
+//MakeFriends accepts target and source id,sends to the repository and returns users names
+func (u *usecase) MakeFriends(target string, source string) (string, string, error) {
 	name1, name2, err := u.repository.MakeFriends(target, source)
 	return name1, name2, err
 }
 
-func (u *usecase) GetFriends(userId int) ([]string, error) {
+//GetFriends accepts user id,sends to the repository and return slice of friends names
+func (u *usecase) GetFriends(userId string) ([]string, error) {
 	allUsers, err := u.repository.GetFriends(userId)
 	return allUsers, err
 }
