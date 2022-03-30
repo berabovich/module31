@@ -9,7 +9,7 @@ type (
 		UpdateUser(string, int) error
 		GetFriends(string) ([]string, error)
 		MakeFriends(string, string) (string, string, error)
-		GetUsers() []*entity.User
+		GetUsers(*entity.User) []*entity.User
 	}
 
 	Repository interface {
@@ -18,7 +18,7 @@ type (
 		UpdateAge(string, int) error
 		GetFriends(string) ([]string, error)
 		MakeFriends(string, string) (string, string, error)
-		GetUsers() []*entity.User
+		GetUsers(*entity.User) []*entity.User
 	}
 )
 
@@ -45,8 +45,8 @@ func (u *usecase) DeleteUser(id string) (string, error) {
 }
 
 //GetUsers sends to the repository and return slice of all users
-func (u *usecase) GetUsers() []*entity.User {
-	allUsers := u.repository.GetUsers()
+func (u *usecase) GetUsers(user *entity.User) []*entity.User {
+	allUsers := u.repository.GetUsers(user)
 	return allUsers
 }
 

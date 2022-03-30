@@ -15,17 +15,10 @@ var collection *mongo.Collection
 var ctx = context.TODO()
 
 type mongodb struct {
-	//index     int
-	usersById map[int]*entity.User
+	client *mongo.Client
 }
 
 func NewMongodb() (*mongodb, error) {
-	return &mongodb{
-		usersById: make(map[int]*entity.User),
-	}, nil
-}
-
-func connectDB() *mongo.Client {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
@@ -35,11 +28,13 @@ func connectDB() *mongo.Client {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return client
+	return &mongodb{client: client}, nil
+
 }
 
-func disconnectDB(client *mongo.Client) {
-	err := client.Disconnect(ctx)
+func DisconnectDB(client *mongodb) {
+	err := client.client.Disconnect(ctx)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,8 +42,8 @@ func disconnectDB(client *mongo.Client) {
 
 //CreateUser accepts new user, adds to the database and return user id
 func (r *mongodb) CreateUser(user *entity.User) (string, error) {
-	client := connectDB()
-	collection = client.Database("usersDB").Collection("users")
+
+	collection = r.client.Database("usersDB").Collection("users")
 
 	u, err := collection.InsertOne(ctx, user)
 	if err != nil {
@@ -57,14 +52,13 @@ func (r *mongodb) CreateUser(user *entity.User) (string, error) {
 
 	id := u.InsertedID.(primitive.ObjectID).Hex()
 
-	disconnectDB(client)
 	return id, nil
 }
 
 //DeleteUser accepts user id, delete from database and return user name
 func (r *mongodb) DeleteUser(id string) (string, error) {
-	client := connectDB()
-	collection = client.Database("usersDB").Collection("users")
+
+	collection = r.client.Database("usersDB").Collection("users")
 
 	userID, err := primitive.ObjectIDFromHex(id)
 
@@ -87,15 +81,13 @@ func (r *mongodb) DeleteUser(id string) (string, error) {
 	}
 	_, err = collection.UpdateMany(ctx, filter, update)
 
-	disconnectDB(client)
 	return name, nil
 }
 
 //GetUsers return all users from database
-func (r *mongodb) GetUsers() []*entity.User {
-	client := connectDB()
+func (r *mongodb) GetUsers(user *entity.User) []*entity.User {
 
-	collection = client.Database("usersDB").Collection("users")
+	collection = r.client.Database("usersDB").Collection("users")
 	cur, err := collection.Find(ctx, bson.D{})
 	if err != nil {
 		log.Fatal(err)
@@ -103,7 +95,6 @@ func (r *mongodb) GetUsers() []*entity.User {
 	var allUsers []*entity.User
 	for cur.Next(ctx) {
 
-		var user *entity.User
 		err := cur.Decode(&user)
 		if err != nil {
 			log.Fatal(err)
@@ -111,14 +102,14 @@ func (r *mongodb) GetUsers() []*entity.User {
 		allUsers = append(allUsers, user)
 	}
 	err = cur.Close(ctx)
-	disconnectDB(client)
+
 	return allUsers
 }
 
 //UpdateAge accepts user id and new age, update user age into database
 func (r *mongodb) UpdateAge(id string, newAge int) error {
-	client := connectDB()
-	collection = client.Database("usersDB").Collection("users")
+
+	collection = r.client.Database("usersDB").Collection("users")
 	userID, err := primitive.ObjectIDFromHex(id)
 	filter := bson.D{{"_id", userID}}
 
@@ -131,14 +122,14 @@ func (r *mongodb) UpdateAge(id string, newAge int) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	disconnectDB(client)
+
 	return nil
 }
 
 //MakeFriends accepts target and source id, adds to the slice of friends each other and returns users names
 func (r *mongodb) MakeFriends(target string, source string) (string, string, error) {
-	client := connectDB()
-	collection = client.Database("usersDB").Collection("users")
+
+	collection = r.client.Database("usersDB").Collection("users")
 	targetID, _ := primitive.ObjectIDFromHex(target)
 	sourceID, _ := primitive.ObjectIDFromHex(source)
 	opt := bson.D{
@@ -178,14 +169,13 @@ func (r *mongodb) MakeFriends(target string, source string) (string, string, err
 	}
 	_, _ = collection.UpdateOne(ctx, filter, update)
 
-	disconnectDB(client)
 	return names[0], names[1], nil
 }
 
 //GetFriends accepts user id, return slice of friends names
 func (r *mongodb) GetFriends(userId string) ([]string, error) {
-	client := connectDB()
-	collection = client.Database("usersDB").Collection("users")
+
+	collection = r.client.Database("usersDB").Collection("users")
 
 	var user bson.M
 
@@ -198,6 +188,6 @@ func (r *mongodb) GetFriends(userId string) ([]string, error) {
 		_ = f.Decode(&user)
 		friends = append(friends, user["Name"].(string))
 	}
-	disconnectDB(client)
+
 	return friends, nil
 }

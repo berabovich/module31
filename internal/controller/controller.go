@@ -72,7 +72,8 @@ func (c *Controller) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 //GetUsers sends to the use case and write all users
 func (c *Controller) GetUsers(w http.ResponseWriter, _ *http.Request) {
-	result := c.useCase.GetUsers()
+	user := &entity.User{}
+	result := c.useCase.GetUsers(user)
 	response, err := json.Marshal(result)
 	if err != nil {
 		log.Println(err)

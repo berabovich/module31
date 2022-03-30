@@ -32,10 +32,11 @@ func Run(port string) error {
 	<-done
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer func() {
-
+		repository.DisconnectDB(repositoryA)
 		fmt.Println("App close")
 		cancel()
 	}()
+
 	err = http.ListenAndServe(port, router)
 	if err != nil {
 		return err
