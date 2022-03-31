@@ -11,20 +11,17 @@ import (
 	"module31/internal/entity"
 )
 
-var collection *mongo.Collection
-var ctx = context.TODO()
-
 type mongodb struct {
 	client *mongo.Client
 }
 
 func NewMongodb() (*mongodb, error) {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(ctx, clientOptions)
+	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = client.Ping(ctx, nil)
+	err = client.Ping(context.TODO(), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,7 +30,7 @@ func NewMongodb() (*mongodb, error) {
 }
 
 func DisconnectDB(client *mongodb) {
-	err := client.client.Disconnect(ctx)
+	err := client.client.Disconnect(context.TODO())
 
 	if err != nil {
 		log.Fatal(err)
@@ -43,9 +40,9 @@ func DisconnectDB(client *mongodb) {
 //CreateUser accepts new user, adds to the database and return user id
 func (r *mongodb) CreateUser(user *entity.User) (string, error) {
 
-	collection = r.client.Database("usersDB").Collection("users")
+	collection := r.client.Database("usersDB").Collection("users")
 
-	u, err := collection.InsertOne(ctx, user)
+	u, err := collection.InsertOne(context.TODO(), user)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,12 +55,12 @@ func (r *mongodb) CreateUser(user *entity.User) (string, error) {
 //DeleteUser accepts user id, delete from database and return user name
 func (r *mongodb) DeleteUser(id string) (string, error) {
 
-	collection = r.client.Database("usersDB").Collection("users")
+	collection := r.client.Database("usersDB").Collection("users")
 
 	userID, err := primitive.ObjectIDFromHex(id)
 
 	var d bson.M
-	_ = collection.FindOneAndDelete(ctx, bson.D{{
+	_ = collection.FindOneAndDelete(context.TODO(), bson.D{{
 		"_id",
 		userID,
 	}}).Decode(&d)
@@ -79,7 +76,7 @@ func (r *mongodb) DeleteUser(id string) (string, error) {
 			{"Friends", id},
 		}},
 	}
-	_, err = collection.UpdateMany(ctx, filter, update)
+	_, err = collection.UpdateMany(context.TODO(), filter, update)
 
 	return name, nil
 }
@@ -87,13 +84,13 @@ func (r *mongodb) DeleteUser(id string) (string, error) {
 //GetUsers return all users from database
 func (r *mongodb) GetUsers(user *entity.User) []*entity.User {
 
-	collection = r.client.Database("usersDB").Collection("users")
-	cur, err := collection.Find(ctx, bson.D{})
+	collection := r.client.Database("usersDB").Collection("users")
+	cur, err := collection.Find(context.TODO(), bson.D{})
 	if err != nil {
 		log.Fatal(err)
 	}
 	var allUsers []*entity.User
-	for cur.Next(ctx) {
+	for cur.Next(context.TODO()) {
 
 		err := cur.Decode(&user)
 		if err != nil {
@@ -101,7 +98,7 @@ func (r *mongodb) GetUsers(user *entity.User) []*entity.User {
 		}
 		allUsers = append(allUsers, user)
 	}
-	err = cur.Close(ctx)
+	err = cur.Close(context.TODO())
 
 	return allUsers
 }
@@ -109,7 +106,7 @@ func (r *mongodb) GetUsers(user *entity.User) []*entity.User {
 //UpdateAge accepts user id and new age, update user age into database
 func (r *mongodb) UpdateAge(id string, newAge int) error {
 
-	collection = r.client.Database("usersDB").Collection("users")
+	collection := r.client.Database("usersDB").Collection("users")
 	userID, err := primitive.ObjectIDFromHex(id)
 	filter := bson.D{{"_id", userID}}
 
@@ -118,7 +115,7 @@ func (r *mongodb) UpdateAge(id string, newAge int) error {
 			{"Age", newAge},
 		}},
 	}
-	_, err = collection.UpdateOne(ctx, filter, update)
+	_, err = collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -129,14 +126,14 @@ func (r *mongodb) UpdateAge(id string, newAge int) error {
 //MakeFriends accepts target and source id, adds to the slice of friends each other and returns users names
 func (r *mongodb) MakeFriends(target string, source string) (string, string, error) {
 
-	collection = r.client.Database("usersDB").Collection("users")
+	collection := r.client.Database("usersDB").Collection("users")
 	targetID, _ := primitive.ObjectIDFromHex(target)
 	sourceID, _ := primitive.ObjectIDFromHex(source)
 	opt := bson.D{
 		{"_id", 0},
 		{"Name", 1},
 	}
-	cur, _ := collection.Find(ctx, bson.D{{
+	cur, _ := collection.Find(context.TODO(), bson.D{{
 		"_id",
 		bson.D{{
 			"$in",
@@ -146,7 +143,7 @@ func (r *mongodb) MakeFriends(target string, source string) (string, string, err
 	var n bson.M
 	var names []string
 
-	for cur.Next(ctx) {
+	for cur.Next(context.TODO()) {
 		_ = cur.Decode(&n)
 		names = append(names, n["Name"].(string))
 	}
@@ -158,7 +155,7 @@ func (r *mongodb) MakeFriends(target string, source string) (string, string, err
 			{"Friends", source},
 		}},
 	}
-	_, _ = collection.UpdateOne(ctx, filter, update)
+	_, _ = collection.UpdateOne(context.TODO(), filter, update)
 
 	filter = bson.D{{"_id", sourceID}}
 
@@ -167,7 +164,7 @@ func (r *mongodb) MakeFriends(target string, source string) (string, string, err
 			{"Friends", target},
 		}},
 	}
-	_, _ = collection.UpdateOne(ctx, filter, update)
+	_, _ = collection.UpdateOne(context.TODO(), filter, update)
 
 	return names[0], names[1], nil
 }
@@ -175,16 +172,16 @@ func (r *mongodb) MakeFriends(target string, source string) (string, string, err
 //GetFriends accepts user id, return slice of friends names
 func (r *mongodb) GetFriends(userId string) ([]string, error) {
 
-	collection = r.client.Database("usersDB").Collection("users")
+	collection := r.client.Database("usersDB").Collection("users")
 
 	var user bson.M
 
-	f, err := collection.Find(ctx, bson.D{{"Friends", userId}})
+	f, err := collection.Find(context.TODO(), bson.D{{"Friends", userId}})
 	if err != nil {
 		log.Fatal(err)
 	}
 	var friends []string
-	for f.Next(ctx) {
+	for f.Next(context.TODO()) {
 		_ = f.Decode(&user)
 		friends = append(friends, user["Name"].(string))
 	}
